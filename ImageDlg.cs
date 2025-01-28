@@ -10,138 +10,132 @@ using System.Windows.Forms;
 using OpenCvSharp.Extensions;
 using OpenCvSharp;
 using System.Configuration;
+using System.Drawing.Drawing2D;
+using System.Security.Cryptography;
+using System.Runtime.Hosting;
 
 
 //콤보박스를 넣어서 칼라를 모노로 바꾸는 필터추가
 
 namespace GmPJect
 {
-    // 이미지 연산(Enum으로 정의)
+    // 이미지 연산(Enum)
     enum ImageOperation
     {
-        OpAdd = 0,         // 이미지 더하기
-        OpSubtract,        // 이미지 빼기
-        OpMultiply,        // 이미지 곱하기
-        OpDivide,          // 이미지 나누기
-        OpMax,             // 두 이미지 중 큰 값
-        OpMin,             // 두 이미지 중 작은 값
-        OpAbs,             // 절대값 연산
-        OpAbDiff,          // 절대 차 연산
-        and,               // 비트 연산 AND
-        or,                // 비트 연산 OR
-        xor,               // 비트 연산 XOR
-        not,               // 비트 연산 NOT
-        compare,           // 두 이미지 비교
+        opAdd = 0,          
+        opSubtract,      
+        opMultiply,        
+        opDivide,          
+        opMax,             
+        opMin,             
+        opAbs,            
+        opAbsDiff,         
+        and,               
+        or,                
+        xor,               
+        not,               
+        compare        
     }
 
-    // 이미지 필터(Enum으로 정의)
+    // 이미지 필터(Enum)
     enum ImageFilter
     {
-        FilterBlur = 0,          // 평균 블러 필터
-        FilterBoxFilter,         // 박스 필터
-        FilterMedianBlur,        // 중간값 필터
-        FilterGaussianBlur,      // 가우시안 블러 필터
-        FilterBilateral,         // 양방향 필터
-        FilterSobel,             // 소벨 필터
-        FilterScharr,            // 샤르 필터
-        FilterLaplacian,         // 라플라시안 필터
-        FilterCanny,             // 캐니 엣지 검출
+        FilterBlur = 0,         
+        FilterBoxFilter,        
+        FilterMedianBlur,       
+        FilterGaussianBlur,     
+        FilterBilateral, 
+        FilterSobel,             
+        FilterScharr,           
+        FilterLaplacian,         
+        FilterCanny            
     }
 
     public partial class ImageDlg : Form
     {
+        //*************************************예외처리
+        private bool isImageLoaded = false;
+        private bool isImageOp = false;
+        
+        //*************************************Mat객체선언
+        Mat blur = new Mat();
+        Mat dst = new Mat();
+
         public ImageDlg()
+        { 
+            InitializeComponent();
+        }
+
+       
+
+
+
+        //이미지 열기
+        private void 열기ToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            InitializeComponent(); // 폼 초기화
-        }
-        private void edToolStripMenuItem_Click(object sender, EventArgs e)
-        { //Form1 먼저 띄우고 그 다음에 ImageDlg 띄우기
-            ImageDlg dlg = new ImageDlg();
-            dlg.ShowDialog();
-        }
-
-
-        private bool isImageLoaded = false; //불러온이미지없이 연산시 예외처리
-        private bool isImageOp = false;     //저장할 연산이미지없을시 예외처리
-        Mat blur = new Mat();  // OpenCV Mat 객체 선언
-        Mat dst = new Mat();  // OpenCV Mat 객체 선언
-
-        private string loadFilePath; // 로드된 이미지 파일 경로 저장
-
-        private void rabbitToolStripMenuItem_Click(object sender, EventArgs e)
-        {  // "토끼" 버튼 클릭 시 동작
-
-            loadFilePath = "rabbit.JPG"; // 파일 경로 저장
-            Mat src1 = Cv2.ImRead("rabbit.JPG"); // OpenCV로 이미지 읽기
-            SrcPictureBox.Image = BitmapConverter.ToBitmap(src1); // Mat 객체를 Bitmap으로 변환하여 PictureBox에 표시
-            isImageLoaded = true; //이미지가 성공적으로 로드되었음을 표시
-        }
-
-        private void spongebobSqurepantsToolStripMenuItem_Click(object sender, EventArgs e)
-        {  // "스폰지밥" 버튼 클릭 시 동작
-            loadFilePath = "spongebob.JPG"; // 파일 경로 저장
-            Mat src1 = Cv2.ImRead("spongebob.JPG"); //OpenCV로 이미지 읽기
-            SrcPictureBox.Image = BitmapConverter.ToBitmap(src1); // Mat 객체를 Bitmap으로 변환하여 PictureBox에 표시
-            isImageLoaded = true; //이미지가 성공적으로 로드되었음을 표시
-        }
-
-        private void cakeToolStripMenuItem_Click(object sender, EventArgs e)
-        { // "케이크" 버튼 클릭 시 동작
-            loadFilePath = "cake.JPG"; // 파일 경로 저장
-            Mat src1 = Cv2.ImRead("cake.JPG"); //OpenCV로 이미지 읽기
-            SrcPictureBox.Image = BitmapConverter.ToBitmap(src1); // Mat 객체를 Bitmap으로 변환하여 PictureBox에 표시
-            isImageLoaded = true; //이미지가 성공적으로 로드되었음을 표시
-        }
-
-        private void choonsikToolStripMenuItem_Click(object sender, EventArgs e)
-        { //"춘식이"버튼 클릭 시 동작
-            loadFilePath = "choonsik.GIF"; //파일 경로 저장
-            Image gifImage = Image.FromFile(loadFilePath); //OpenCV로 이미지 읽기
-            SrcPictureBox.Image = gifImage;  // PictureBox에 GIF 표시
-            isImageLoaded = true; //이미지가 성공적으로 로드되었음을 표시
-        }
-        private void applyBTN_Click(object sender, EventArgs e)
-        {
-            if (!isImageOp || dst.Empty())
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                MessageBox.Show("적용할 이미지가 없습니다. 먼저 필터 또는 연산을 선택하세요.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+               
+                Mat src1 = Cv2.ImRead(openFileDialog1.FileName);
+                SrcPictureBox.Image = BitmapConverter.ToBitmap(src1);
+                isImageLoaded = true; //이미지가 성공적으로 열렸을 때 isImageLoaded 값을 true로 설정해야 이미지를 불러온 상태임을 표시할 수 있습니다.!!!!!!
+            }
+        }
+        
+        //연산 적용 버튼
+        private void ApplyBTN_Click(object sender, EventArgs e)
+        {
+          
+
+            //이미지를 불러오지 않았을 경우
+            if (!isImageLoaded)
+            
+            {
+                MessageBox.Show("먼저 이미지를 열어주세요.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 이미지를 불러왔지만 필터나 연산이 적용되지 않은 경우
+            if (!isImageOp)
+            {               
+                MessageBox.Show("이미지에 적용할 필터나 연산이 없습니다.\n필터를 선택하거나 연산을 적용해주세요.",
+                                "오류", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             try
             {
                 // 현재 dst(Mat) 내용을 원본 이미지 Mat(src)에 적용
-                Mat src = dst.Clone(); // dst를 src으로 복사하여 적용
-                DstPictureBox.Image = BitmapConverter.ToBitmap(src); // DstPictureBox에 업데이트
+                Mat src1 = dst.Clone(); // dst를 src으로 복사하여 적용
+                DstPictureBox.Image = BitmapConverter.ToBitmap(src1); // DstPictureBox에 업데이트
+                isImageOp = true; // 연산 성공 후 상태 업데이트
 
-                // 상태 초기화
+                
+                // 연산 적용 상태 초기화
                 isImageLoaded = true;
-                isImageOp = false; // 이미 적용했으므로 연산 상태 리셋
+                
                 MessageBox.Show("이미지 변환이 성공적으로 적용되었습니다.", "적용 완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"이미지를 적용하는 중 오류가 발생했습니다.\n{ex.Message}", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
-        private void 열기ToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (openFileDialog1.ShowDialog() == DialogResult.OK)
-            {  //DialogResult는 windows forms 라이브러리에서 제공하는 열거형.
-                //대화상자(Dialog)에서 반환되는 값 표현
-                SrcPictureBox.Load(openFileDialog1.FileName);
+            
 
-                Mat src = Cv2.ImRead(openFileDialog1.FileName);
-                SrcPictureBox.Image = BitmapConverter.ToBitmap(src);
 
-                isImageLoaded = true;
+            // 텍스트박스에 연산 결과 표시
+            Scalar mean = Cv2.Mean(dst); // dst에서 평균값 계산
+            textBox1.Text = $"Mean: {mean.Val0:F2}, {mean.Val1:F2}, {mean.Val2:F2}";
+            
 
-            }
+
+
         }
 
+           
 
 
-
+        //저장 버튼
         private void SaveBTN_Click(object sender, EventArgs e)
         {
             if (!isImageOp) // 연산된 이미지가 없을 경우 예외 처리
@@ -155,7 +149,7 @@ namespace GmPJect
             {
                 Title = "이미지 저장",
                 Filter = "JPEG Files|*.jpg|PNG Files|*.png|Bitmap Files|*.bmp|All Files|*.*", // 저장 가능한 파일 형식 필터
-                DefaultExt = "jpg", // 기본 파일 확장자를 JPEG로 설정
+                DefaultExt = "jpg", 
                 AddExtension = true // 사용자가 확장자를 입력하지 않으면 기본 확장자를 자동 추가 
             };
 
@@ -202,6 +196,8 @@ namespace GmPJect
                 }
             }
         }
+
+
         // 연산 콤보박스에서 선택 시 동작
         private void OpcomboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -209,11 +205,14 @@ namespace GmPJect
             {
                 MessageBox.Show("먼저 이미지를 열어주세요.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
+
+                
             }
 
+
             // 원본 이미지 읽기
-            Mat src = Cv2.ImRead(loadFilePath, ImreadModes.Color);
-            Mat src2 = new Mat(src.Size(), MatType.CV_8UC3, new Scalar(50, 50, 50)); // 연산용 두 번째 이미지
+            Mat src1 = Cv2.ImRead(openFileDialog1.FileName);
+            Mat src2 = new Mat(src1.Size(), MatType.CV_8UC3, new Scalar(50, 50, 50)); // 연산용 두 번째 이미지
 
             // 선택된 연산 타입 가져오기
             ImageOperation selType = (ImageOperation)OpcomboBox.SelectedIndex;
@@ -221,51 +220,59 @@ namespace GmPJect
             // 연산 적용
             switch (selType)
             {
-                case ImageOperation.OpAdd:
-                    Cv2.Add(src, src2, dst);
+                case ImageOperation.opAdd:
+                    Cv2.Add(src1, src2, dst);
                     break;
-                case ImageOperation.OpSubtract:
-                    Cv2.Subtract(src, src2, dst);
+                case ImageOperation.opSubtract:
+                    Cv2.Subtract(src1, src2, dst);
                     break;
-                case ImageOperation.OpMultiply:
-                    Cv2.Multiply(src, src2, dst);
+                case ImageOperation.opMultiply:
+                    Cv2.Multiply(src1, src2, dst);
                     break;
-                case ImageOperation.OpDivide:
-                    Cv2.Divide(src, src2, dst);
+                case ImageOperation.opDivide:
+                    Cv2.Divide(src1, src2, dst);
                     break;
-                case ImageOperation.OpMax:
-                    Cv2.Max(src, src2, dst);
+                case ImageOperation.opMax:
+                    Cv2.Max(src1, src2, dst);
                     break;
-                case ImageOperation.OpMin:
-                    Cv2.Min(src, src2, dst);
+                case ImageOperation.opMin:
+                    Cv2.Min(src1, src2, dst);
                     break;
-                case ImageOperation.OpAbDiff:
-                    Cv2.Absdiff(src, src2, dst);
+                case ImageOperation.opAbs:
+                    Cv2.Multiply(src1, src2, dst);
+                    Cv2.Abs(dst);
+                    break;
+                case ImageOperation.opAbsDiff:
+                    Mat matMul = new Mat();
+                    Cv2.Multiply(src1, src2, matMul);
+                    Cv2.Absdiff(src1, matMul, dst);
                     break;
                 case ImageOperation.and:
-                    Cv2.BitwiseAnd(src, src2, dst);
+                    Cv2.BitwiseAnd(src1, src2, dst);
                     break;
                 case ImageOperation.or:
-                    Cv2.BitwiseOr(src, src2, dst);
+                    Cv2.BitwiseOr(src1, src2, dst);
                     break;
                 case ImageOperation.xor:
-                    Cv2.BitwiseXor(src, src2, dst);
+                    Cv2.BitwiseXor(src1, src2, dst);
                     break;
                 case ImageOperation.not:
-                    Cv2.BitwiseNot(src, dst);
+                    Cv2.BitwiseNot(src1, dst);
                     break;
                 case ImageOperation.compare:
-                    Cv2.Compare(src, src2, dst, CmpType.EQ);
+                    Cv2.Compare(src1, src2, dst, CmpType.EQ);
                     break;
             }
 
-            // 결과 업데이트
-            DstPictureBox.Image = BitmapConverter.ToBitmap(dst);
+            if (dst.Empty())
+            {
+                MessageBox.Show("연산이 실패했습니다. 다시 시도해주세요.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                isImageOp = false;
+                return;
+            }
+
             isImageOp = true;
 
-            // 텍스트박스에 연산 결과 표시
-            Scalar mean = Cv2.Mean(dst);
-            textBox1.Text = $"Mean: {mean.Val0:F2}, {mean.Val1:F2}, {mean.Val2:F2}";
         }
 
         private void Filtercmbx_SelectedIndexChanged(object sender, EventArgs e)
@@ -275,11 +282,16 @@ namespace GmPJect
                 MessageBox.Show("먼저 이미지를 열어주세요.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
 
-                isImageOp = true;
+               
             }
+     
 
             // 원본 이미지 읽기
-            Mat src = Cv2.ImRead(loadFilePath, ImreadModes.Color);
+            Mat src1 = Cv2.ImRead(openFileDialog1.FileName);
+            //Mat src = Cv2.ImRead("sparkler.png", ImreadModes.ReducedColor2);
+           // Mat src2 = new Mat(src1.Size(), MatType.CV_8UC3, new Scalar(0, 0, 30));
+
+            Cv2.GaussianBlur(src1, blur, new OpenCvSharp.Size(3, 3), 1, 0, BorderTypes.Default);
 
             // 선택된 필터 타입 가져오기
             ImageFilter selType = (ImageFilter)Filtercmbx.SelectedIndex;
@@ -288,44 +300,46 @@ namespace GmPJect
             switch (selType)
             {
                 case ImageFilter.FilterBlur:
-                    Cv2.Blur(src, dst, new OpenCvSharp.Size(9, 9));
+                    Cv2.Blur(src1, dst, new OpenCvSharp.Size(9, 9));
                     break;
                 case ImageFilter.FilterBoxFilter:
-                    Cv2.BoxFilter(src, dst, MatType.CV_8UC3, new OpenCvSharp.Size(9, 9));
+                    Cv2.BoxFilter(src1, dst, MatType.CV_8UC3, new OpenCvSharp.Size(9, 9));
                     break;
                 case ImageFilter.FilterMedianBlur:
-                    Cv2.MedianBlur(src, dst, 9);
+                    Cv2.MedianBlur(src1, dst, 9);
                     break;
                 case ImageFilter.FilterGaussianBlur:
-                    Cv2.GaussianBlur(src, dst, new OpenCvSharp.Size(9, 9), 1.5, 1.5);
+                    Cv2.GaussianBlur(src1, dst, new OpenCvSharp.Size(9, 9), 1.5, 1.5);
                     break;
                 case ImageFilter.FilterBilateral:
-                    Cv2.BilateralFilter(src, dst, 9, 75, 75);
+                    Cv2.BilateralFilter(src1, dst, 9, 75, 75);
                     break;
                 case ImageFilter.FilterSobel:
-                    Cv2.Sobel(src, dst, MatType.CV_8U, 1, 0, ksize: 3);
+                    Cv2.Sobel(src1, dst, MatType.CV_8U, 1, 0, ksize: 3);
                     break;
                 case ImageFilter.FilterScharr:
-                    Cv2.Scharr(src, dst, MatType.CV_8U, 1, 0);
+                    Cv2.Scharr(src1, dst, MatType.CV_8U, 1, 0);
                     break;
                 case ImageFilter.FilterLaplacian:
-                    Cv2.Laplacian(src, dst, MatType.CV_8U);
+                    Cv2.Laplacian(src1, dst, MatType.CV_8U);
                     break;
                 case ImageFilter.FilterCanny:
-                    Cv2.Canny(src, dst, 100, 200);
+                    Cv2.Canny(src1, dst, 100, 200);
                     break;
             }
 
-            // 결과 업데이트
-            DstPictureBox.Image = BitmapConverter.ToBitmap(dst);
+            if (dst.Empty())
+            {
+                MessageBox.Show("연산이 실패했습니다. 다시 시도해주세요.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                isImageOp = false;
+                return;
+            }
+
             isImageOp = true;
 
-            // 텍스트박스에 필터 결과 표시
-            Scalar mean = Cv2.Mean(dst);
-            textBox1.Text = $"Mean: {mean.Val0:F2}, {mean.Val1:F2}, {mean.Val2:F2}";
         }
 
-
+        
     }
 }
 
