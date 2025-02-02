@@ -67,7 +67,12 @@ namespace GmPJect
         }
 
        
-
+        //이미지 초기화
+        private void 새로만들기ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SrcPictureBox.Image = null;
+            DstPictureBox.Image = null;
+        }
 
 
         //이미지 열기
